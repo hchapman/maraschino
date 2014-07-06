@@ -1099,8 +1099,7 @@ def xbmc_get_addon_path(xbmc, addonid, path=''):
     logger.log('LIBRARY :: Retrieving plugin %s path: %s' % (addonid, path), 'INFO')
     sort = xbmc_sort('addons')
     uid = "plugin://%s%s"%(addonid, path)
-    print "==========="
-    print uid
+
     files = xbmc.Files.GetDirectory(media='video', directory=uid)['files']
     if not files:
         files = [{'label': 'Directory is empty', 'file': quote_plus(path)}]
@@ -1115,24 +1114,21 @@ def xbmc_get_addon_path(xbmc, addonid, path=''):
 
         f['addonid'] = parsed.netloc
         f['path'] = quote_plus(parsed.path)
-    print files
 
     return files
 
 def xbmc_get_addons(xbmc, plug_type):
     logger.log('LIBRARY :: Retrieving %s plugins' % (plug_type,), 'INFO')
     sort = xbmc_sort('addons')
-    uid = "addons://sources/%s"%(plug_type,)
-    files = xbmc.Files.GetDirectory(media='video', directory=uid)['files']
-    print files, uid
-    for plug in files:
-        parsed = urlparse(plug['file'])
-        if parsed.scheme != "plugin":
-            continue
 
-        plug['addonid'] = parsed.netloc
-    print files
-    return files
+    properties = ['name', 'thumbnail', 'description']
+    plugins = xbmc.Addons.GetAddons(type="xbmc.addon.%s"%(plug_type,),
+                                    enabled=True,
+                                    properties=properties)['addons']
+    for plugin in plugins:
+        plugin['label'] = plugin['name']
+    print plugins
+    return plugins
 
 def xbmc_get_channelgroups(xbmc, channeltype):
     return xbmc.PVR.GetChannelGroups(channeltype=channeltype)['channelgroups']
