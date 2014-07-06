@@ -360,6 +360,36 @@ library_settings = {
             ]
         },
     ],
+    'addons': [
+        {
+            'key': 'xbmc_addons_view',
+            'value': 'list',
+            'description': 'Addons view',
+            'type': 'select',
+            'options': [
+                {'value': 'list', 'label': 'List'},
+            ]
+        },
+        {
+            'key': 'xbmc_addons_sort',
+            'value': 'addons',
+            'description': 'Sort Addons by',
+            'type': 'select',
+            'options': [
+                {'value': 'addons', 'label': 'Name'},
+            ]
+        },
+        {
+            'key': 'xbmc_addons_sort_order',
+            'value': 'ascending',
+            'description': 'Sort direction',
+            'type': 'select',
+            'options': [
+                {'value': 'ascending', 'label': 'Ascending'},
+                {'value': 'descending', 'label': 'Descending'},
+            ]
+        },
+    ],
     'channelgroups': [
         {
             'key': 'xbmc_channelgroups_sort_order',
@@ -609,7 +639,7 @@ def xhr_xbmc_library_media(media_type=None):
                 library = xbmc_get_albums(xbmc, int(artistid))
                 title = library[0]['artist']
                 back_path = '/artists'
-            
+
 
         elif media_type == 'songs':
             file_type = 'audio'
@@ -699,6 +729,16 @@ def xhr_xbmc_library_media(media_type=None):
                     {'label': 'Video', 'filetype': 'video'},
                     {'label': 'Music', 'filetype': 'music'}
                 ]
+
+        #ADDONS
+        elif media_type == 'addons':
+            file_type = None
+            title = 'Addons'
+            path = '/addons'
+            library = [
+                {'label': 'Video', 'filetype': 'video', 'path': 'addons://sources/video'},
+                {'label': 'Audio', 'filetype': 'music', 'path': 'addons://sources/audio'}
+            ]
 
     except Exception as e:
         logger.log('LIBRARY :: Problem fetching %s' % media_type, 'ERROR')
@@ -1021,6 +1061,19 @@ def xbmc_get_file_path(xbmc, file_type, path):
             f['file'] = f['file'][:-1]
     return files
 
+
+def xbmc_get_video_addons(xbmc):
+    logger.log('LIBRARY :: Retrieving Video Addons', 'INFO')
+    version = xbmc.Application.GetProperties(properties=['version'])['version']['major']
+
+    #sort = xbmc_sort('tvshows')
+    properties = ['name', 'description', 'thumbnail']
+
+    addons = xbmc.Files.GetDirectory(directory="addons://sources/video")['files']
+
+    print addons[5]
+    print xbmc.Files.GetDirectory(directory=addons[5]["file"])
+    return addons
 
 def xbmc_get_channelgroups(xbmc, channeltype):
     return xbmc.PVR.GetChannelGroups(channeltype=channeltype)['channelgroups']

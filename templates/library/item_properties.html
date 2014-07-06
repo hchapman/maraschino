@@ -54,6 +54,9 @@ filter="{{ item.label }}"
 {% elif media == 'files' and item.file %}
   data-url="/files?files={{ file }}&path={{ item.file }}"
 
+{% elif media == 'addons' %}
+  data-url="/files?files={{ item.filetype }}&path={{ item.path }}"
+
 {% elif media == 'pvr' %}
   data-url="/channelgroups?type={{ item.channeltype }}"
 
