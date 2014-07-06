@@ -1083,17 +1083,17 @@ def xbmc_get_file_path(xbmc, file_type, path):
     logger.log('LIBRARY :: Retrieving %s path: %s' % (file_type, path), 'INFO')
     sort = xbmc_sort('files')
     files = xbmc.Files.GetDirectory(media=file_type, directory=path, sort=sort)['files']
-
     if not files:
-        files = [{'label': 'Directory is empty', 'file': path}]
+        files = [{'label': 'Directory is empty', 'file': quote_plus(path)}]
     else:
         files = [x for x in files if x['filetype'] == 'directory'] + [x for x in files if x['filetype'] != 'directory']
         sorted(files)
     for f in files:
         if f['file'].endswith('/') or f['file'].endswith('\\'):
             f['file'] = f['file'][:-1]
-    return files
+        f['file'] = quote_plus(f['file'].encode('utf8'))
 
+    return files
 
 def xbmc_get_addon_path(xbmc, addonid, path=''):
     logger.log('LIBRARY :: Retrieving plugin %s path: %s' % (addonid, path), 'INFO')
