@@ -1,4 +1,6 @@
 from flask import render_template, jsonify, request, json
+from urllib import quote_plus
+from urlparse import urlparse
 from maraschino.noneditable import server_api_address, safe_server_address
 from maraschino.models import Setting
 from maraschino.database import db_session
@@ -732,13 +734,44 @@ def xhr_xbmc_library_media(media_type=None):
 
         #ADDONS
         elif media_type == 'addons':
-            file_type = None
-            title = 'Addons'
-            path = '/addons'
-            library = [
-                {'label': 'Video', 'filetype': 'video', 'path': 'addons://sources/video'},
-                {'label': 'Audio', 'filetype': 'music', 'path': 'addons://sources/audio'}
-            ]
+            global plugin_sources
+
+            if 'plug_type' in request.args:
+                file_type = request.args['plug_type']
+
+                if 'addonid' in request.args: # Plugin
+                    addonid = request.args['addonid']
+
+                    if 'path' in request.args and len(request.args['path']) > 0: # Path not empty
+                        subpath = request.args['path']
+                        title = xbmc.Addons.GetAddonDetails(addonid=addonid,
+                                                            properties=['name'])['addon']['name']
+                        path = "/addons?plug_type=%s&addonid=%s&path=%s"%(file_type,addonid,quote_plus(subpath))
+                        back_path = "/addons?plug_type=%s&addonid=%s&path=%s"%(file_type,addonid,
+                                                                          quote_plus(os.path.dirname(subpath)))
+                        library = xbmc_get_addon_path(xbmc, addonid, path=subpath)
+
+                    else: # Plugin root
+                        title = xbmc.Addons.GetAddonDetails(addonid=addonid,
+                                                            properties=['name'])['addon']['name']
+                        path = "/addons?plug_type=%s&addonid=%s"%(file_type,addonid)
+                        back_path = "/addons?plug_type=%s"%(file_type,)
+                        library = xbmc_get_addon_path(xbmc, addonid)
+
+                else: # Plugin type
+                    title = "%s Plugins" % file_type.capitalize()
+                    path = "/addons?plug_type=%s"%(file_type,)
+                    back_path = "/addons"
+                    library = xbmc_get_addons(xbmc, file_type)
+
+            else:
+                file_type = None
+                title = 'Addons'
+                path = '/addons'
+                library = [
+                    {'label': 'Video', 'plug_type': 'video'},
+                    {'label': 'Music', 'plug_type': 'audio'}
+                ]
 
     except Exception as e:
         logger.log('LIBRARY :: Problem fetching %s' % media_type, 'ERROR')
@@ -1062,18 +1095,44 @@ def xbmc_get_file_path(xbmc, file_type, path):
     return files
 
 
-def xbmc_get_video_addons(xbmc):
-    logger.log('LIBRARY :: Retrieving Video Addons', 'INFO')
-    version = xbmc.Application.GetProperties(properties=['version'])['version']['major']
+def xbmc_get_addon_path(xbmc, addonid, path=''):
+    logger.log('LIBRARY :: Retrieving plugin %s path: %s' % (addonid, path), 'INFO')
+    sort = xbmc_sort('addons')
+    uid = "plugin://%s%s"%(addonid, path)
+    print "==========="
+    print uid
+    files = xbmc.Files.GetDirectory(media='video', directory=uid)['files']
+    if not files:
+        files = [{'label': 'Directory is empty', 'file': quote_plus(path)}]
+    else:
+        files = [x for x in files if x['filetype'] == 'directory'] + [x for x in files if x['filetype'] != 'directory']
+        sorted(files)
+    for f in files:
+        if f['file'].endswith('/') or f['file'].endswith('\\'):
+            f['file'] = f['file'][:-1]
+        parsed = urlparse(f['file'])
+        assert parsed.scheme == "plugin" # Else have to do some magic
 
-    #sort = xbmc_sort('tvshows')
-    properties = ['name', 'description', 'thumbnail']
+        f['addonid'] = parsed.netloc
+        f['path'] = quote_plus(parsed.path)
+    print files
 
-    addons = xbmc.Files.GetDirectory(directory="addons://sources/video")['files']
+    return files
 
-    print addons[5]
-    print xbmc.Files.GetDirectory(directory=addons[5]["file"])
-    return addons
+def xbmc_get_addons(xbmc, plug_type):
+    logger.log('LIBRARY :: Retrieving %s plugins' % (plug_type,), 'INFO')
+    sort = xbmc_sort('addons')
+    uid = "addons://sources/%s"%(plug_type,)
+    files = xbmc.Files.GetDirectory(media='video', directory=uid)['files']
+    print files, uid
+    for plug in files:
+        parsed = urlparse(plug['file'])
+        if parsed.scheme != "plugin":
+            continue
+
+        plug['addonid'] = parsed.netloc
+    print files
+    return files
 
 def xbmc_get_channelgroups(xbmc, channeltype):
     return xbmc.PVR.GetChannelGroups(channeltype=channeltype)['channelgroups']
