@@ -1,5 +1,5 @@
 from flask import render_template, jsonify, request, json
-from urllib import quote_plus
+from urllib import unquote, quote_plus, urlencode
 from urlparse import urlparse
 from maraschino.noneditable import server_api_address, safe_server_address
 from maraschino.models import Setting
@@ -370,6 +370,7 @@ library_settings = {
             'type': 'select',
             'options': [
                 {'value': 'list', 'label': 'List'},
+                {'value': 'large_list', 'label': 'Large List'}
             ]
         },
         {
@@ -735,6 +736,7 @@ def xhr_xbmc_library_media(media_type=None):
         #ADDONS
         elif media_type == 'addons':
             global plugin_sources
+            backstack = request.args.getlist('backstack') # empty list if no stack
 
             if 'plug_type' in request.args:
                 file_type = request.args['plug_type']
@@ -742,21 +744,42 @@ def xhr_xbmc_library_media(media_type=None):
                 if 'addonid' in request.args: # Plugin
                     addonid = request.args['addonid']
 
-                    if 'path' in request.args and len(request.args['path']) > 0: # Path not empty
-                        subpath = request.args['path']
+                    print backstack, "!!!"
+                    if ('path' in request.args and
+                        len(request.args['path']) > 0 and
+                        'path' != "/"): # Path not empty
+                        subpath = unquote(request.args['path'])
+                        print subpath
+                        print "==="
+
                         title = xbmc.Addons.GetAddonDetails(addonid=addonid,
                                                             properties=['name'])['addon']['name']
-                        path = "/addons?plug_type=%s&addonid=%s&path=%s"%(file_type,addonid,quote_plus(subpath))
-                        back_path = "/addons?plug_type=%s&addonid=%s&path=%s"%(file_type,addonid,
-                                                                          quote_plus(os.path.dirname(subpath)))
-                        library = xbmc_get_addon_path(xbmc, addonid, path=subpath)
+
+                        if backstack:
+                            path = "/addons?plug_type=%s&addonid=%s&path=%s&%s"%(
+                                file_type,addonid,quote_plus(subpath),
+                                "&".join(("backstack=%s"%quote_plus(i) for i in backstack)))
+                            back_path = '/addons?plug_type=%s&addonid=%s&path=%s&%s'%(
+                                file_type,
+                                addonid,
+                                quote_plus(backstack[-1]),
+                                "&".join(("backstack=%s"%quote_plus(i) for i in backstack[:-1])))
+                        else:
+                            path = "/addons?plug_type=%s&addonid=%s&path=%s"%(
+                                file_type,addonid,quote_plus(subpath))
+                            back_path = '/addons?plug_type=%s'%(file_type,)
+
+                        backstack.append(subpath)
+                        print backstack
+                        library = xbmc_get_addon_path(xbmc, addonid, path=subpath, backstack=backstack)
 
                     else: # Plugin root
                         title = xbmc.Addons.GetAddonDetails(addonid=addonid,
                                                             properties=['name'])['addon']['name']
                         path = "/addons?plug_type=%s&addonid=%s"%(file_type,addonid)
                         back_path = "/addons?plug_type=%s"%(file_type,)
-                        library = xbmc_get_addon_path(xbmc, addonid)
+                        backstack.append("/")
+                        library = xbmc_get_addon_path(xbmc, addonid, backstack=backstack)
 
                 else: # Plugin type
                     title = "%s Plugins" % file_type.capitalize()
@@ -1095,12 +1118,14 @@ def xbmc_get_file_path(xbmc, file_type, path):
 
     return files
 
-def xbmc_get_addon_path(xbmc, addonid, path=''):
+def xbmc_get_addon_path(xbmc, addonid, path='', backstack=[]):
     logger.log('LIBRARY :: Retrieving plugin %s path: %s' % (addonid, path), 'INFO')
     sort = xbmc_sort('addons')
-    uid = "plugin://%s%s"%(addonid, path)
-
-    files = xbmc.Files.GetDirectory(media='video', directory=uid)['files']
+    uri = "plugin://%s%s"%(addonid, path)
+    print uri
+    properties = ['thumbnail']
+    files = xbmc.Files.GetDirectory(media='video', directory=uri, properties=properties)['files']
+    print files
     if not files:
         files = [{'label': 'Directory is empty', 'file': quote_plus(path)}]
     else:
@@ -1113,8 +1138,9 @@ def xbmc_get_addon_path(xbmc, addonid, path=''):
         assert parsed.scheme == "plugin" # Else have to do some magic
 
         f['addonid'] = parsed.netloc
-        f['path'] = quote_plus(parsed.path)
-
+        f['path'] = quote_plus(parsed.path+"?"+quote_plus(parsed.query))
+        f['backstack'] = "&"+"&".join(("backstack=%s"%quote_plus(i) for i in backstack))
+        print f['backstack']
     return files
 
 def xbmc_get_addons(xbmc, plug_type):
@@ -1122,8 +1148,8 @@ def xbmc_get_addons(xbmc, plug_type):
     sort = xbmc_sort('addons')
 
     properties = ['name', 'thumbnail', 'description']
-    plugins = xbmc.Addons.GetAddons(type="xbmc.addon.%s"%(plug_type,),
-                                    enabled=True,
+    plugins = xbmc.Addons.GetAddons(type="xbmc.python.pluginsource",
+                                    enabled=True, content=plug_type,
                                     properties=properties)['addons']
     for plugin in plugins:
         plugin['label'] = plugin['name']
@@ -1170,6 +1196,10 @@ def xbmc_get_details(xbmc, media_type, mediaid):
     elif media_type == 'album':
         properties = ['title', 'artist', 'year', 'genre', 'description', 'albumlabel', 'rating', 'thumbnail']
         details = xbmc.AudioLibrary.GetAlbumDetails(albumid=mediaid, properties=properties)['albumdetails']
+
+    elif media_type == 'addonfile':
+        properties = []
+        details = xbmc.Files.GetFileDetails(file=unquote(mediaid))['filedetails']
 
     for k in details:
         if isinstance(details[k], list):

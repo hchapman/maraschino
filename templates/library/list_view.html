@@ -7,7 +7,14 @@
       {% if buttons and not 'movieset' in item %}
         <span class="list_buttons">
           {% if 'play' in buttons %}
-            <a class="button play">Play</a>
+            {% if media == 'addons' %}
+              {% if item.filetype == 'file' %}
+                <a class="button play_file">Play</a>
+              {% endif %}
+
+            {% else %}
+              <a class="button play">Play</a>
+            {% endif %}
           {% endif %}
 
           {% if 'info' in buttons %}
@@ -15,7 +22,7 @@
           {% endif %}
 
           {% if 'queue' in buttons %}
-            {% if media == 'files' %}
+            {% if media == 'files' or media == 'addons' %}
               {% if item.filetype == 'file' %}
                 <a class="button queue_file">Queue</a>
               {% endif %}

@@ -14,6 +14,9 @@
 {% elif media == 'files' and item.filetype == 'file' %}
   class="play_file media"
 
+{% elif media == 'addons' and item.filetype == 'file' %}
+  class="info media"
+
 {% else %}
   class="get media"
 {% endif %}
@@ -37,10 +40,10 @@ filter="{{ item.label }}"
   data-url="/movies?setid={{ item.setid }}"
 
 {% elif media == 'tvshows' %}
-	data-url="/seasons?tvshowid={{ item.tvshowid }}"
+  data-url="/seasons?tvshowid={{ item.tvshowid }}"
 
 {% elif media == 'seasons' %}
-	data-url="/episodes?tvshowid={{ item.tvshowid }}&season={{ item.season }}"
+  data-url="/episodes?tvshowid={{ item.tvshowid }}&season={{ item.season }}"
 
 {% elif media == 'artists' %}
   data-url="/albums?artistid={{ item.artistid }}"
@@ -55,7 +58,7 @@ filter="{{ item.label }}"
   data-url="/files?files={{ file }}&path={{ item.file }}"
 
 {% elif media == 'addons' and item.addonid %}
-  data-url="/addons?plug_type={{ file }}&addonid={{ item.addonid }}&path={{ item.path }}"
+  data-url="/addons?plug_type={{ file }}&addonid={{ item.addonid }}&path={{ item.path }}{{ item.backstack }}"
 
 {% elif media == 'addons' and item.plug_type %}
   data-url="/addons?plug_type={{ item.plug_type }}"

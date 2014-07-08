@@ -9,6 +9,12 @@
     data-xhr_queue="/xhr/enqueue_file/{{ file }}/"
     data-path="{{ item.file }}"
 
+  {% elif media == 'addons' %}
+    data-xhr_play="/xhr/play_file/{{ file }}/"
+    data-xhr_queue="/xhr/enqueue_file/{{ file }}/"
+    data-xhr_info="/xhr/library/addons?plug_type={{ file }}&addonid={{ item.addonid }}&path={{ item.path }}&getinfo=1"
+    data-path="{{ item.file }}"
+
   {% elif media == 'channels' %}
     data-xhr_play="/xhr/controls/change_channel/{{ item.channelid }}"
 

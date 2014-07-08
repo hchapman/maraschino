@@ -22,6 +22,9 @@
   {% elif media == 'files' %}
     {% set buttons = ['queue'] %}
 
+  {% elif media == 'addons' %}
+    {% set buttons = ['play', 'queue'] %}
+
   {% else %}
     {% set buttons = [] %}
   {% endif %}

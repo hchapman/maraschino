@@ -3,7 +3,7 @@
     <li id="large" {% include "library/item_properties.html" %}{% include "library/control_paths.html" %}>
 
       {% if item.thumbnail %}
-        {% if media == 'artists' or media == 'albums' or media == 'episodes' or media == 'songs' %}
+        {% if media == 'artists' or media == 'albums' or media == 'episodes' or media == 'songs' or media == "addons" %}
           <img class="{{ media }}" src="{{ item.thumbnail|xbmc_image }}">
         {% else %}
           <img class="poster" src="{{ item.thumbnail|xbmc_image }}">
@@ -11,7 +11,7 @@
       {% endif %}
 
       <div
-        {% if media == 'artists' or media == 'albums' or media == 'episodes' or media == 'songs' %}
+        {% if media == 'artists' or media == 'albums' or media == 'episodes' or media == 'songs' or media == "addons" %}
           class="details {{ media }}"
         {% else %}
           class="details"
